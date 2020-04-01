@@ -9,6 +9,7 @@ import android.content.ContentResolver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -41,6 +42,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
 import java.util.Locale;
+import java.util.prefs.Preferences;
 
 public class TodayWeatherActivity extends AppCompatActivity {
 
@@ -59,7 +61,9 @@ public class TodayWeatherActivity extends AppCompatActivity {
 
         locationMangaer = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 
-        Toast.makeText(this, "started", Toast.LENGTH_LONG).show();
+        SharedPreferences preferences = getSharedPreferences("Settings", MODE_PRIVATE);
+        cityName = preferences.getString("CurrentCity", "");
+
         GetGPSLocation();
 
         //String imageUrl = "http://cdn.weatherapi.com/weather/64x64/day/296.png";
@@ -131,12 +135,35 @@ public class TodayWeatherActivity extends AppCompatActivity {
         alert.show();
     }
 
+    public void LoadTemperaturInformation(String givenText) throws JSONException {
+        JSONObject object = (JSONObject) new JSONTokener(givenText).nextValue();
+
+        JSONObject currentWeather = object.getJSONObject("current");
+
+        TextView tvwTemperatureC = (TextView)findViewById(R.id.tvwTemperatureC);
+        TextView tvwTemperatureF = (TextView)findViewById(R.id.tvwTemperatureF);
+        TextView tvwFeelsLikeC = (TextView)findViewById(R.id.tvwFeelsLikeC);
+        TextView tvwFeelsLikeF = (TextView)findViewById(R.id.tvwFeelsLikeF);
+
+        TextView tvwIsDayOrNight = (TextView)findViewById(R.id.tvwIsDayOrNight);
+        TextView tvwConditionText = (TextView)findViewById(R.id.tvwConditionText);
+        TextView tvwHumidity = (TextView)findViewById(R.id.tvwHumidity);
+        TextView tvwAlert = (TextView)findViewById(R.id.tvwAlert);
+
+        tvwTemperatureC.setText(tvwTemperatureC.getText() + currentWeather.getString("temp_c").toString());
+        tvwTemperatureF.setText(tvwTemperatureF.getText() + currentWeather.getString("temp_f").toString());
+        tvwFeelsLikeC.setText(tvwFeelsLikeC.getText() + currentWeather.getString("feelslike_c").toString());
+        tvwFeelsLikeF.setText(tvwFeelsLikeF.getText() + currentWeather.getString("feelslike_f").toString());
+
+        tvwIsDayOrNight.setText(tvwIsDayOrNight.getText() + currentWeather.getString("is_day").toString());
+        tvwConditionText.setText(tvwConditionText.getText() + currentWeather.getString("temp_c").toString());
+        tvwHumidity.setText(tvwHumidity.getText() + currentWeather.getString("humidity").toString());
+        tvwAlert.setText(tvwAlert.getText() + currentWeather.getString("alert").toString());
+    }
+
     private class MyLocationListener implements LocationListener {
         @Override
         public void onLocationChanged(Location loc) {
-            String longitude = "Longitude: " + loc.getLongitude();
-            String latitude = "Latitude: " + loc.getLatitude();
-
             Geocoder gcd = new Geocoder(getBaseContext(), Locale.getDefault());
             List<Address> addresses;
 
@@ -144,12 +171,22 @@ public class TodayWeatherActivity extends AppCompatActivity {
                 addresses = gcd.getFromLocation(loc.getLatitude(), loc
                         .getLongitude(), 1);
 
-                if (addresses.size() > 0)
+                if (addresses.size() > 0){
                     cityName = addresses.get(0).getLocality();
 
-                new ReadAPI().execute();
-                Toast.makeText(getBaseContext(), cityName, Toast.LENGTH_LONG).show();
-            } catch (IOException e) {
+                    SharedPreferences preferences = getSharedPreferences("Settings", MODE_PRIVATE);
+                    if(!cityName.equals(preferences.getString("CurrentCity", ""))){
+                        new ReadAPI().execute();
+
+                        SharedPreferences.Editor editor = preferences.edit();
+                        editor.putString("CurrentCity", cityName);
+                        editor.apply();
+                    }
+                    else{
+                        LoadTemperaturInformation(preferences.getString("WeatherContent", ""));
+                    }
+                }
+            } catch (IOException | JSONException e) {
                 e.printStackTrace();
             }
         }
@@ -217,30 +254,35 @@ public class TodayWeatherActivity extends AppCompatActivity {
         }
 
         protected String doInBackground(Void... urls) {
-            String query = "http://api.weatherapi.com/v1/forecast.json?key=bb98c750c15845f3b1e201038200803&q=" + cityName + "&days=3";
-
-            try {
-                URL url = new URL(query);
-                HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
+            if(!cityName.equals("")){
+                String query = "http://api.weatherapi.com/v1/forecast.json?key=bb98c750c15845f3b1e201038200803&q=" + cityName + "&days=3";
 
                 try {
-                    BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(urlConnection.getInputStream()));
-                    StringBuilder stringBuilder = new StringBuilder();
-                    String line;
+                    URL url = new URL(query);
+                    HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
 
-                    while ((line = bufferedReader.readLine()) != null) {
-                        stringBuilder.append(line).append("\n");
+                    try {
+                        BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(urlConnection.getInputStream()));
+                        StringBuilder stringBuilder = new StringBuilder();
+                        String line;
+
+                        while ((line = bufferedReader.readLine()) != null) {
+                            stringBuilder.append(line).append("\n");
+                        }
+
+                        bufferedReader.close();
+                        return stringBuilder.toString();
                     }
-
-                    bufferedReader.close();
-                    return stringBuilder.toString();
+                    finally{
+                        urlConnection.disconnect();
+                    }
                 }
-                finally{
-                    urlConnection.disconnect();
+                catch(Exception e) {
+                    //Log.e("ERROR", e.getMessage(), e);
+                    return null;
                 }
             }
-            catch(Exception e) {
-                //Log.e("ERROR", e.getMessage(), e);
+            else{
                 return null;
             }
         }
@@ -250,35 +292,14 @@ public class TodayWeatherActivity extends AppCompatActivity {
                 response = "THERE WAS AN ERROR";
             }
 
-            JSONObject object = null;
             try {
-                object = (JSONObject) new JSONTokener(response).nextValue();
+                SharedPreferences preferences = getSharedPreferences("Settings", MODE_PRIVATE);
+                SharedPreferences.Editor editor = preferences.edit();
+                editor.putString("WeatherContent", response);
+                editor.apply();
 
-                JSONObject currentWeather = object.getJSONObject("current");
-
-                TextView tvwTemperatureC = (TextView)findViewById(R.id.tvwTemperatureC);
-                TextView tvwTemperatureF = (TextView)findViewById(R.id.tvwTemperatureF);
-                TextView tvwFeelsLikeC = (TextView)findViewById(R.id.tvwFeelsLikeC);
-                TextView tvwFeelsLikeF = (TextView)findViewById(R.id.tvwFeelsLikeF);
-
-                TextView tvwIsDayOrNight = (TextView)findViewById(R.id.tvwIsDayOrNight);
-                TextView tvwConditionText = (TextView)findViewById(R.id.tvwConditionText);
-                TextView tvwHumidity = (TextView)findViewById(R.id.tvwHumidity);
-                TextView tvwAlert = (TextView)findViewById(R.id.tvwAlert);
-
-                tvwTemperatureC.setText(tvwTemperatureC.getText() + currentWeather.getString("temp_c").toString());
-                tvwTemperatureF.setText(tvwTemperatureF.getText() + currentWeather.getString("temp_f").toString());
-                tvwFeelsLikeC.setText(tvwFeelsLikeC.getText() + currentWeather.getString("feelslike_c").toString());
-                tvwFeelsLikeF.setText(tvwFeelsLikeF.getText() + currentWeather.getString("feelslike_f").toString());
-
-                tvwIsDayOrNight.setText(tvwIsDayOrNight.getText() + currentWeather.getString("is_day").toString());
-                tvwConditionText.setText(tvwConditionText.getText() + currentWeather.getString("temp_c").toString());
-                tvwHumidity.setText(tvwHumidity.getText() + currentWeather.getString("humidity").toString());
-                tvwAlert.setText(tvwAlert.getText() + currentWeather.getString("alert").toString());
-
-                Toast.makeText(context, currentWeather.getString("temp_c").toString(), Toast.LENGTH_LONG).show();
+                LoadTemperaturInformation(response);
             } catch (JSONException e) {
-                //Toast.makeText(context, e.toString(), Toast.LENGTH_LONG).show();
                 e.printStackTrace();
             }
 
