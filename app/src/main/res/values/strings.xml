@@ -4,4 +4,14 @@
     <string name="developer_name_1">Kidist Birhanu</string>
     <string name="developer_name_2">Bereket Tolcha</string>
     <string name="star_banner">Star Banner</string>
+    <string name="text_show_forecast">Show Forecast</string>
+    <string name="text_alert">Alert:</string>
+    <string name="text_humidity">Humidity:</string>
+    <string name="text_condition">Condition:</string>
+    <string name="text_day_night">Day/Night:</string>
+    <string name="text_feels_like_f">Feels Like (F):</string>
+    <string name="text_feels_like_c">Feels Like (C):</string>
+    <string name="text_temperature_f">Temperature (F):</string>
+    <string name="text_temperature_c">Temperature (C):</string>
+    <string name="text_show_today">Show Today</string>
 </resources>

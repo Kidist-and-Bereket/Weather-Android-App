@@ -1,10 +1,12 @@
 package com.kidist.bereket.weatherandroidapp;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
 import android.Manifest;
+import android.app.Activity;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -23,6 +25,7 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.view.View;
+import android.webkit.PermissionRequest;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -40,17 +43,20 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.security.PermissionCollection;
+import java.security.Permissions;
 import java.util.List;
 import java.util.Locale;
 import java.util.prefs.Preferences;
 
 public class TodayWeatherActivity extends AppCompatActivity {
 
-    private LocationManager locationMangaer = null;
+    private LocationManager locationManager = null;
     private LocationListener locationListener = null;
 
     public static Context context;
     public String cityName = "";
+    public Activity parent;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -58,39 +64,84 @@ public class TodayWeatherActivity extends AppCompatActivity {
         setContentView(R.layout.activity_today_weather);
 
         context = this;
+        parent = this;
 
-        locationMangaer = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 
         SharedPreferences preferences = getSharedPreferences("Settings", MODE_PRIVATE);
         cityName = preferences.getString("CurrentCity", "");
 
+        Toast.makeText(this, cityName, Toast.LENGTH_LONG).show();
         GetGPSLocation();
 
         //String imageUrl = "http://cdn.weatherapi.com/weather/64x64/day/296.png";
         //new RetrieveWeatherImage().execute(imageUrl);
     }
 
-    public void GetGPSLocation() {
-        boolean flag = IsGPSAvailable();
-        if (flag) {
-            locationListener = new MyLocationListener();
+    public void ShowForecastActivity(View button){
+        Intent intent=new Intent(TodayWeatherActivity.this,ForecastWeatherActivity.class);
+        startActivity(intent);
+    }
 
-            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                // TODO: Consider calling
-                //    ActivityCompat#requestPermissions
-                // here to request the missing permissions, and then overriding
-                //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-                //                                          int[] grantResults)
-                // to handle the case where the user grants the permission. See the documentation
-                // for ActivityCompat#requestPermissions for more details.
-                return;
+    @Override
+    public void onRequestPermissionsResult(int requestCode,
+                                           @NonNull String[] permissions,
+                                           @NonNull int[] grantResults)
+    {
+        super.onRequestPermissionsResult(requestCode,
+                        permissions, grantResults);
+
+        if (requestCode == 100) {
+
+            // Checking whether user granted the permission or not.
+            if (grantResults.length > 0
+                    && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+
+                // Showing the toast message
+                Toast.makeText(this,
+                        "Location Permission Granted",
+                        Toast.LENGTH_SHORT)
+                        .show();
+
+                GetGPSLocation();
             }
+            else {
+                Toast.makeText(this,
+                        "Location Permission Denied",
+                        Toast.LENGTH_SHORT)
+                        .show();
+            }
+        }
+    }
 
-            locationMangaer.requestLocationUpdates(LocationManager
-                    .GPS_PROVIDER, 5000, 10, locationListener);
-        } else {
-            ShowMessage("GPS Status!!", "Your GPS is: OFF", "Turn GPS On", "Cancel");
-            //Toast.makeText(this, "Your GPS is off, Make sure it is turned ON!", Toast.LENGTH_LONG).show();
+    public void GetGPSLocation() {
+        try {
+            boolean flag = IsGPSAvailable();
+
+            if (flag) {
+                locationListener = new MyLocationListener();
+
+                if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                        && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+
+                    ActivityCompat.requestPermissions(
+                                    this,
+                                    new String[] { Manifest.permission.ACCESS_FINE_LOCATION
+                                    , Manifest.permission.ACCESS_COARSE_LOCATION},
+                                    100);
+                    return;
+                }
+
+                Toast.makeText(this, "GPS Reading Started", Toast.LENGTH_LONG).show();
+                locationManager.requestLocationUpdates(LocationManager
+                        .GPS_PROVIDER, 5000, 10, locationListener);
+            } else {
+                ShowMessage("GPS Status!!", "Your GPS is: OFF", "Turn GPS On", "Cancel");
+                //Toast.makeText(this, "Your GPS is off, Make sure it is turned ON!", Toast.LENGTH_LONG).show();
+            }
+        }
+        catch(Exception e){
+            Toast.makeText(this, e.getMessage(), Toast.LENGTH_LONG).show();
         }
     }
 
@@ -135,58 +186,65 @@ public class TodayWeatherActivity extends AppCompatActivity {
         alert.show();
     }
 
-    public void LoadTemperaturInformation(String givenText) throws JSONException {
-        JSONObject object = (JSONObject) new JSONTokener(givenText).nextValue();
-
-        JSONObject currentWeather = object.getJSONObject("current");
-
-        TextView tvwTemperatureC = (TextView)findViewById(R.id.tvwTemperatureC);
-        TextView tvwTemperatureF = (TextView)findViewById(R.id.tvwTemperatureF);
-        TextView tvwFeelsLikeC = (TextView)findViewById(R.id.tvwFeelsLikeC);
-        TextView tvwFeelsLikeF = (TextView)findViewById(R.id.tvwFeelsLikeF);
-
-        TextView tvwIsDayOrNight = (TextView)findViewById(R.id.tvwIsDayOrNight);
-        TextView tvwConditionText = (TextView)findViewById(R.id.tvwConditionText);
-        TextView tvwHumidity = (TextView)findViewById(R.id.tvwHumidity);
-        TextView tvwAlert = (TextView)findViewById(R.id.tvwAlert);
-
-        tvwTemperatureC.setText(tvwTemperatureC.getText() + currentWeather.getString("temp_c").toString());
-        tvwTemperatureF.setText(tvwTemperatureF.getText() + currentWeather.getString("temp_f").toString());
-        tvwFeelsLikeC.setText(tvwFeelsLikeC.getText() + currentWeather.getString("feelslike_c").toString());
-        tvwFeelsLikeF.setText(tvwFeelsLikeF.getText() + currentWeather.getString("feelslike_f").toString());
-
-        tvwIsDayOrNight.setText(tvwIsDayOrNight.getText() + currentWeather.getString("is_day").toString());
-        tvwConditionText.setText(tvwConditionText.getText() + currentWeather.getString("temp_c").toString());
-        tvwHumidity.setText(tvwHumidity.getText() + currentWeather.getString("humidity").toString());
-        tvwAlert.setText(tvwAlert.getText() + currentWeather.getString("alert").toString());
+    public void LoadTemperatureInformation(String givenText) throws JSONException {
+        Toast.makeText(context, givenText, Toast.LENGTH_LONG).show();
+//
+//        JSONObject object = (JSONObject) new JSONTokener(givenText).nextValue();
+//
+//        JSONObject currentWeather = object.getJSONObject("current");
+//
+//        TextView tvwTemperatureC = (TextView)findViewById(R.id.tvwTemperatureC);
+//        TextView tvwTemperatureF = (TextView)findViewById(R.id.tvwTemperatureF);
+//        TextView tvwFeelsLikeC = (TextView)findViewById(R.id.tvwFeelsLikeC);
+//        TextView tvwFeelsLikeF = (TextView)findViewById(R.id.tvwFeelsLikeF);
+//
+//        TextView tvwIsDayOrNight = (TextView)findViewById(R.id.tvwIsDayOrNight);
+//        TextView tvwConditionText = (TextView)findViewById(R.id.tvwConditionText);
+//        TextView tvwHumidity = (TextView)findViewById(R.id.tvwHumidity);
+//        TextView tvwAlert = (TextView)findViewById(R.id.tvwAlert);
+//
+//        tvwTemperatureC.setText(tvwTemperatureC.getText() + currentWeather.getString("temp_c").toString());
+//        tvwTemperatureF.setText(tvwTemperatureF.getText() + currentWeather.getString("temp_f").toString());
+//        tvwFeelsLikeC.setText(tvwFeelsLikeC.getText() + currentWeather.getString("feelslike_c").toString());
+//        tvwFeelsLikeF.setText(tvwFeelsLikeF.getText() + currentWeather.getString("feelslike_f").toString());
+//
+//        tvwIsDayOrNight.setText(tvwIsDayOrNight.getText() + currentWeather.getString("is_day").toString());
+//        tvwConditionText.setText(tvwConditionText.getText() + currentWeather.getString("temp_c").toString());
+//        tvwHumidity.setText(tvwHumidity.getText() + currentWeather.getString("humidity").toString());
+//        tvwAlert.setText(tvwAlert.getText() + currentWeather.getString("alert").toString());
     }
 
     private class MyLocationListener implements LocationListener {
         @Override
-        public void onLocationChanged(Location loc) {
+        public void onLocationChanged(Location loc)
+        {
             Geocoder gcd = new Geocoder(getBaseContext(), Locale.getDefault());
             List<Address> addresses;
 
             try {
+                Toast.makeText(context, "GPS Reading Started Seriously", Toast.LENGTH_LONG).show();
                 addresses = gcd.getFromLocation(loc.getLatitude(), loc
                         .getLongitude(), 1);
 
                 if (addresses.size() > 0){
                     cityName = addresses.get(0).getLocality();
+                    Toast.makeText(context, "GPS Reading Completed: " + cityName, Toast.LENGTH_LONG).show();
 
                     SharedPreferences preferences = getSharedPreferences("Settings", MODE_PRIVATE);
+
                     if(!cityName.equals(preferences.getString("CurrentCity", ""))){
                         new ReadAPI().execute();
 
-                        SharedPreferences.Editor editor = preferences.edit();
-                        editor.putString("CurrentCity", cityName);
-                        editor.apply();
+//                        SharedPreferences.Editor editor = preferences.edit();
+//                        editor.putString("CurrentCity", cityName);
+//                        editor.apply();
                     }
                     else{
-                        LoadTemperaturInformation(preferences.getString("WeatherContent", ""));
+                        LoadTemperatureInformation(preferences.getString("WeatherContent", ""));
                     }
                 }
             } catch (IOException | JSONException e) {
+                Toast.makeText(context, "GPS Reading Started but failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
                 e.printStackTrace();
             }
         }
@@ -298,12 +356,11 @@ public class TodayWeatherActivity extends AppCompatActivity {
                 editor.putString("WeatherContent", response);
                 editor.apply();
 
-                LoadTemperaturInformation(response);
+                LoadTemperatureInformation(response);
             } catch (JSONException e) {
                 e.printStackTrace();
             }
 
-            //Toast.makeText(context, response, Toast.LENGTH_LONG).show();
             //progressBar.setVisibility(View.GONE);
             //Log.i("INFO", response);
             //responseView.setText(response);

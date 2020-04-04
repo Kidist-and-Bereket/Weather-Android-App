@@ -8,73 +8,95 @@
     android:layout_margin="10dp"
     tools:context=".TodayWeatherActivity">
 
-    <TextView
-        android:id="@+id/tvwTemperatureC"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textColor="#000000"
-        android:textSize="20sp"
-        android:text="Temperature (C): " />
+        android:orientation="vertical">
 
-    <TextView
-        android:id="@+id/tvwTemperatureF"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textColor="#000000"
-        android:textSize="20sp"
-        android:text="Temperature (F): " />
+        <TextView
+            android:id="@+id/tvwTemperatureC"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/text_temperature_c"
+            android:textColor="#000000"
+            android:textSize="20sp" />
 
-    <TextView
-        android:id="@+id/tvwFeelsLikeC"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textColor="#000000"
-        android:textSize="20sp"
-        android:text="Feels Like (C): " />
+        <TextView
+            android:id="@+id/tvwTemperatureF"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/text_temperature_f"
+            android:textColor="#000000"
+            android:textSize="20sp" />
 
-    <TextView
-        android:id="@+id/tvwFeelsLikeF"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textColor="#000000"
-        android:textSize="20sp"
-        android:text="Feels Like (F): " />
+        <TextView
+            android:id="@+id/tvwFeelsLikeC"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/text_feels_like_c"
+            android:textColor="#000000"
+            android:textSize="20sp" />
 
-    <TextView
-        android:id="@+id/tvwIsDayOrNight"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textColor="#000000"
-        android:textSize="20sp"
-        android:text="Day/Night:" />
+        <TextView
+            android:id="@+id/tvwFeelsLikeF"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/text_feels_like_f"
+            android:textColor="#000000"
+            android:textSize="20sp" />
 
-    <TextView
-        android:id="@+id/tvwConditionText"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textColor="#000000"
-        android:textSize="20sp"
-        android:text="Condition: " />
+        <TextView
+            android:id="@+id/tvwIsDayOrNight"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/text_day_night"
+            android:textColor="#000000"
+            android:textSize="20sp" />
 
-    <ImageView
-        android:id="@+id/imgvwCondition"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content" />
+        <TextView
+            android:id="@+id/tvwConditionText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/text_condition"
+            android:textColor="#000000"
+            android:textSize="20sp" />
 
-    <TextView
-        android:id="@+id/tvwHumidity"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textColor="#000000"
-        android:textSize="20sp"
-        android:text="Humidity: " />
+        <ImageView
+            android:id="@+id/imgvwCondition"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
 
-    <TextView
-        android:id="@+id/tvwAlert"
+        <TextView
+            android:id="@+id/tvwHumidity"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/text_humidity"
+            android:textColor="#000000"
+            android:textSize="20sp" />
+
+        <TextView
+            android:id="@+id/tvwAlert"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/text_alert"
+            android:textColor="#000000"
+            android:textSize="20sp" />
+
+    </LinearLayout>
+
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textColor="#000000"
-        android:textSize="20sp"
-        android:text="Alert: " />
+        android:layout_height="0dip"
+        android:layout_weight="1"
+        android:gravity="center|bottom"
+        android:orientation="vertical">
+
+        <Button
+            android:id="@+id/btnShowForecast"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:onClick="ShowForecastActivity"
+            android:text="@string/text_show_forecast" />
+    </LinearLayout>
 
 </LinearLayout>
