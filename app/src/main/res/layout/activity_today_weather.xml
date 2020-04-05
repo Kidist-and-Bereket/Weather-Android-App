@@ -1,9 +1,120 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:layout_margin="10dp"
     tools:context=".TodayWeatherActivity">
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+    <TextView
+        android:id="@+id/tvwCurrentCityName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:gravity="center_horizontal"
+        android:text="@string/text_your_are_in"
+        android:textColor="#000000"
+        android:textSize="30sp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingTop="20dp">
+
+
+        <TextView
+            android:id="@+id/tvwTemperatureC"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/text_temperature_c"
+            android:textColor="#000000"
+            android:textSize="20sp" />
+
+        <TextView
+            android:id="@+id/tvwTemperatureF"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/text_temperature_f"
+            android:textColor="#000000"
+            android:textSize="20sp" />
+
+        <TextView
+            android:id="@+id/tvwFeelsLikeC"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/text_feels_like_c"
+            android:textColor="#000000"
+            android:textSize="20sp" />
+
+        <TextView
+            android:id="@+id/tvwFeelsLikeF"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/text_feels_like_f"
+            android:textColor="#000000"
+            android:textSize="20sp" />
+
+        <TextView
+            android:id="@+id/tvwIsDayOrNight"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/text_day_night"
+            android:textColor="#000000"
+            android:textSize="20sp" />
+
+        <TextView
+            android:id="@+id/tvwConditionText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/text_condition"
+            android:textColor="#000000"
+            android:textSize="20sp" />
+
+        <TextView
+            android:id="@+id/tvwHumidity"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/text_humidity"
+            android:textColor="#000000"
+            android:textSize="20sp" />
+
+        <TextView
+            android:id="@+id/tvwAlert"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/text_alert"
+            android:textColor="#000000"
+            android:textSize="20sp" />
+
+    </LinearLayout>
+
+    <ImageView
+        android:id="@+id/imgvwCondition"
+        android:layout_width="match_parent"
+        android:layout_height="150dp" />
+
+    <ProgressBar
+        android:id="@+id/progressBarLoading"
+        style="?android:attr/progressBarStyle"
+        android:layout_width="match_parent"
+        android:layout_height="150dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dip"
+        android:layout_weight="1"
+        android:gravity="center|bottom"
+        android:orientation="vertical">
+
+        <Button
+            android:id="@+id/btnShowForecast"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:onClick="ShowForecastActivity"
+            android:text="@string/text_show_forecast" />
+    </LinearLayout>
+
+</LinearLayout>
