@@ -23,9 +23,12 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
 import android.provider.Settings;
+import android.util.Log;
 import android.view.View;
 import android.webkit.PermissionRequest;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -47,35 +50,45 @@ import java.security.PermissionCollection;
 import java.security.Permissions;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.ExecutionException;
 import java.util.prefs.Preferences;
 
 public class TodayWeatherActivity extends AppCompatActivity {
 
     private LocationManager locationManager = null;
-    private LocationListener locationListener = null;
 
     public static Context context;
     public String cityName = "";
     public Activity parent;
+
+    public TextView tvwCurrentCityName;
+    public boolean isLoadedOnce;
+
+    public ProgressBar progressBarLoading;
+    public ImageView imgvwCondition;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_today_weather);
 
+        tvwCurrentCityName = (TextView)findViewById(R.id.tvwCurrentCityName);
+        progressBarLoading = (ProgressBar)findViewById(R.id.progressBarLoading);
+        imgvwCondition = (ImageView)findViewById(R.id.imgvwCondition);
+
         context = this;
         parent = this;
 
+        isLoadedOnce = false;
         locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 
         SharedPreferences preferences = getSharedPreferences("Settings", MODE_PRIVATE);
         cityName = preferences.getString("CurrentCity", "");
 
-        Toast.makeText(this, cityName, Toast.LENGTH_LONG).show();
-        GetGPSLocation();
+        progressBarLoading.setVisibility(View.INVISIBLE);
+        imgvwCondition.setVisibility(View.INVISIBLE);
 
-        //String imageUrl = "http://cdn.weatherapi.com/weather/64x64/day/296.png";
-        //new RetrieveWeatherImage().execute(imageUrl);
+        GetGPSLocation();
     }
 
     public void ShowForecastActivity(View button){
@@ -119,7 +132,10 @@ public class TodayWeatherActivity extends AppCompatActivity {
             boolean flag = IsGPSAvailable();
 
             if (flag) {
-                locationListener = new MyLocationListener();
+                progressBarLoading.setVisibility(View.VISIBLE);
+                imgvwCondition.setVisibility(View.GONE);
+
+                LocationListener locationListener = new MyLocationListener();
 
                 if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
                         && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -132,15 +148,16 @@ public class TodayWeatherActivity extends AppCompatActivity {
                     return;
                 }
 
-                Toast.makeText(this, "GPS Reading Started", Toast.LENGTH_LONG).show();
                 locationManager.requestLocationUpdates(LocationManager
                         .GPS_PROVIDER, 5000, 10, locationListener);
             } else {
+                progressBarLoading.setVisibility(View.GONE);
                 ShowMessage("GPS Status!!", "Your GPS is: OFF", "Turn GPS On", "Cancel");
                 //Toast.makeText(this, "Your GPS is off, Make sure it is turned ON!", Toast.LENGTH_LONG).show();
             }
         }
         catch(Exception e){
+            progressBarLoading.setVisibility(View.GONE);
             Toast.makeText(this, e.getMessage(), Toast.LENGTH_LONG).show();
         }
     }
@@ -166,8 +183,6 @@ public class TodayWeatherActivity extends AppCompatActivity {
                 .setPositiveButton(positiveButtonText,
                         new DialogInterface.OnClickListener() {
                             public void onClick(DialogInterface dialog, int id) {
-                                // finish the current activity
-                                // AlertBoxAdvance.this.finish();
                                 Intent myIntent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
                                 startActivity(myIntent);
 
@@ -186,32 +201,71 @@ public class TodayWeatherActivity extends AppCompatActivity {
         alert.show();
     }
 
-    public void LoadTemperatureInformation(String givenText) throws JSONException {
-        Toast.makeText(context, givenText, Toast.LENGTH_LONG).show();
-//
-//        JSONObject object = (JSONObject) new JSONTokener(givenText).nextValue();
-//
-//        JSONObject currentWeather = object.getJSONObject("current");
-//
-//        TextView tvwTemperatureC = (TextView)findViewById(R.id.tvwTemperatureC);
-//        TextView tvwTemperatureF = (TextView)findViewById(R.id.tvwTemperatureF);
-//        TextView tvwFeelsLikeC = (TextView)findViewById(R.id.tvwFeelsLikeC);
-//        TextView tvwFeelsLikeF = (TextView)findViewById(R.id.tvwFeelsLikeF);
-//
-//        TextView tvwIsDayOrNight = (TextView)findViewById(R.id.tvwIsDayOrNight);
-//        TextView tvwConditionText = (TextView)findViewById(R.id.tvwConditionText);
-//        TextView tvwHumidity = (TextView)findViewById(R.id.tvwHumidity);
-//        TextView tvwAlert = (TextView)findViewById(R.id.tvwAlert);
-//
-//        tvwTemperatureC.setText(tvwTemperatureC.getText() + currentWeather.getString("temp_c").toString());
-//        tvwTemperatureF.setText(tvwTemperatureF.getText() + currentWeather.getString("temp_f").toString());
-//        tvwFeelsLikeC.setText(tvwFeelsLikeC.getText() + currentWeather.getString("feelslike_c").toString());
-//        tvwFeelsLikeF.setText(tvwFeelsLikeF.getText() + currentWeather.getString("feelslike_f").toString());
-//
-//        tvwIsDayOrNight.setText(tvwIsDayOrNight.getText() + currentWeather.getString("is_day").toString());
-//        tvwConditionText.setText(tvwConditionText.getText() + currentWeather.getString("temp_c").toString());
-//        tvwHumidity.setText(tvwHumidity.getText() + currentWeather.getString("humidity").toString());
-//        tvwAlert.setText(tvwAlert.getText() + currentWeather.getString("alert").toString());
+    protected void ShowProgress() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setCancelable(false)
+                .setView(R.layout.progress_layout);
+
+        AlertDialog alert = builder.create();
+        alert.show();
+    }
+
+    public void LoadTemperatureInformation(String givenText) {
+
+        try {
+            if(!isLoadedOnce){
+
+                JSONObject object = (JSONObject) new JSONTokener(givenText).nextValue();
+
+                JSONObject currentWeather = object.getJSONObject("current");
+
+                TextView tvwTemperatureC = (TextView)findViewById(R.id.tvwTemperatureC);
+                TextView tvwTemperatureF = (TextView)findViewById(R.id.tvwTemperatureF);
+                TextView tvwFeelsLikeC = (TextView)findViewById(R.id.tvwFeelsLikeC);
+                TextView tvwFeelsLikeF = (TextView)findViewById(R.id.tvwFeelsLikeF);
+
+                TextView tvwIsDayOrNight = (TextView)findViewById(R.id.tvwIsDayOrNight);
+                TextView tvwConditionText = (TextView)findViewById(R.id.tvwConditionText);
+                TextView tvwHumidity = (TextView)findViewById(R.id.tvwHumidity);
+                TextView tvwAlert = (TextView)findViewById(R.id.tvwAlert);
+
+                tvwTemperatureC.setText(tvwTemperatureC.getText() + currentWeather.getString("temp_c").toString());
+                tvwTemperatureF.setText(tvwTemperatureF.getText() + currentWeather.getString("temp_f").toString());
+                tvwFeelsLikeC.setText(tvwFeelsLikeC.getText() + currentWeather.getString("feelslike_c").toString());
+                tvwFeelsLikeF.setText(tvwFeelsLikeF.getText() + currentWeather.getString("feelslike_f").toString());
+
+                tvwIsDayOrNight.setText(tvwIsDayOrNight.getText() + currentWeather.getString("is_day").toString());
+                tvwConditionText.setText(tvwConditionText.getText() + currentWeather.getString("temp_c").toString());
+                tvwHumidity.setText(tvwHumidity.getText() + currentWeather.getString("humidity").toString());
+
+                String alert = object.getString("alert");
+                if(!object.getString("alert").equals("{}")){
+                    tvwAlert.setText(tvwAlert.getText() + object.getString("alert").toString());
+                }
+                else{
+                    tvwAlert.setText(tvwAlert.getText() + "Nothing specific");
+                }
+
+                String condition = currentWeather.getString("condition").toString();
+                JSONObject conditionWeather = (JSONObject) new JSONTokener(condition).nextValue();
+
+                ImageView imgvwCondition = findViewById(R.id.imgvwCondition);
+
+                String imageUrl = "http:" + conditionWeather.getString("icon").toString();
+
+
+                Drawable drawable = new RetrieveWeatherImage().execute(imageUrl).get();
+                imgvwCondition.setImageDrawable(drawable);
+
+                isLoadedOnce = true;
+                imgvwCondition.setVisibility(View.VISIBLE);
+                progressBarLoading.setVisibility(View.GONE);
+            }
+        }
+        catch(Exception ex){
+            progressBarLoading.setVisibility(View.GONE);
+            Log.d("error", ex.getMessage());
+        }
     }
 
     private class MyLocationListener implements LocationListener {
@@ -222,18 +276,19 @@ public class TodayWeatherActivity extends AppCompatActivity {
             List<Address> addresses;
 
             try {
-                Toast.makeText(context, "GPS Reading Started Seriously", Toast.LENGTH_LONG).show();
                 addresses = gcd.getFromLocation(loc.getLatitude(), loc
                         .getLongitude(), 1);
 
                 if (addresses.size() > 0){
                     cityName = addresses.get(0).getLocality();
-                    Toast.makeText(context, "GPS Reading Completed: " + cityName, Toast.LENGTH_LONG).show();
+
+                    String buttonText = tvwCurrentCityName.getText() + " (" + cityName + ")";
+                    tvwCurrentCityName.setText(buttonText);
 
                     SharedPreferences preferences = getSharedPreferences("Settings", MODE_PRIVATE);
 
                     if(!cityName.equals(preferences.getString("CurrentCity", ""))){
-                        new ReadAPI().execute();
+                        String result = new ReadAPI().execute().get();
 
 //                        SharedPreferences.Editor editor = preferences.edit();
 //                        editor.putString("CurrentCity", cityName);
@@ -243,8 +298,15 @@ public class TodayWeatherActivity extends AppCompatActivity {
                         LoadTemperatureInformation(preferences.getString("WeatherContent", ""));
                     }
                 }
-            } catch (IOException | JSONException e) {
-                Toast.makeText(context, "GPS Reading Started but failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            } catch (IOException e) {
+                progressBarLoading.setVisibility(View.GONE);
+                //Toast.makeText(context, "GPS Reading Started but failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                e.printStackTrace();
+            } catch (InterruptedException e) {
+                progressBarLoading.setVisibility(View.GONE);
+                e.printStackTrace();
+            } catch (ExecutionException e) {
+                progressBarLoading.setVisibility(View.GONE);
                 e.printStackTrace();
             }
         }
@@ -272,29 +334,17 @@ public class TodayWeatherActivity extends AppCompatActivity {
         protected Drawable doInBackground(String... urls) {
             try {
                 try {
-                    Toast.makeText(context, urls[0], Toast.LENGTH_LONG).show();
                     InputStream is = (InputStream) new URL(urls[0]).getContent();
                     Drawable drawable = Drawable.createFromStream(is, "src name");
 
-                    ImageView imgvwCondition = findViewById(R.id.imgvwCondition);
-
-                    if(drawable == null){
-                        Toast.makeText(context, "image is null", Toast.LENGTH_LONG).show();
-                    }
-                    else{
-                        Toast.makeText(context, "image set", Toast.LENGTH_LONG).show();
-                    }
-
-                    imgvwCondition.setImageDrawable(drawable);
-
                     return drawable;
                 } catch (Exception e) {
-                    Toast.makeText(context, e.toString(), Toast.LENGTH_LONG).show();
+                    Log.d("error", e.getMessage());
                     return null;
                 }
             } catch (Exception e) {
                 this.exception = e;
-                Toast.makeText(context, e.toString(), Toast.LENGTH_LONG).show();
+
                 return null;
             } finally {
 
@@ -331,12 +381,16 @@ public class TodayWeatherActivity extends AppCompatActivity {
                         bufferedReader.close();
                         return stringBuilder.toString();
                     }
+                    catch(Exception e) {
+                        Toast.makeText(context, "ReadAPI: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                        return null;
+                    }
                     finally{
                         urlConnection.disconnect();
                     }
                 }
                 catch(Exception e) {
-                    //Log.e("ERROR", e.getMessage(), e);
+                    Toast.makeText(context, "ReadAPI: " + e.getMessage(), Toast.LENGTH_LONG).show();
                     return null;
                 }
             }
@@ -350,16 +404,12 @@ public class TodayWeatherActivity extends AppCompatActivity {
                 response = "THERE WAS AN ERROR";
             }
 
-            try {
-                SharedPreferences preferences = getSharedPreferences("Settings", MODE_PRIVATE);
-                SharedPreferences.Editor editor = preferences.edit();
-                editor.putString("WeatherContent", response);
-                editor.apply();
+            SharedPreferences preferences = getSharedPreferences("Settings", MODE_PRIVATE);
+            SharedPreferences.Editor editor = preferences.edit();
+            editor.putString("WeatherContent", response);
+            editor.apply();
 
-                LoadTemperatureInformation(response);
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
+            LoadTemperatureInformation(response);
 
             //progressBar.setVisibility(View.GONE);
             //Log.i("INFO", response);

@@ -14,4 +14,10 @@
     <string name="text_temperature_f">Temperature (F):</string>
     <string name="text_temperature_c">Temperature (C):</string>
     <string name="text_show_today">Show Today</string>
+    <string name="text_your_are_in">You are in:</string>
+    <string name="text_moonset">Moonset:</string>
+    <string name="text_moonrise">Moonrise:</string>
+    <string name="text_sunset">Sunset:</string>
+    <string name="text_sunrise">Sunrise:</string>
+    <string name="text_date">Date:</string>
 </resources>
