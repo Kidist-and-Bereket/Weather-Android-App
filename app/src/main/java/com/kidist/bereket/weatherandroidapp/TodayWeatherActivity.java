@@ -177,25 +177,41 @@ public class TodayWeatherActivity extends AppCompatActivity {
 
     protected void ShowMessage(String title, String content, String positiveButtonText, String negativeButtonText) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setMessage(content)
-                .setCancelable(false)
-                .setTitle(title)
-                .setPositiveButton(positiveButtonText,
-                        new DialogInterface.OnClickListener() {
-                            public void onClick(DialogInterface dialog, int id) {
-                                Intent myIntent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
-                                startActivity(myIntent);
+        if(!negativeButtonText.equals("")) {
+            builder.setMessage(content)
+                    .setCancelable(false)
+                    .setTitle(title)
+                    .setPositiveButton(positiveButtonText,
+                            new DialogInterface.OnClickListener() {
+                                public void onClick(DialogInterface dialog, int id) {
+                                    Intent myIntent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+                                    startActivity(myIntent);
 
-                                dialog.cancel();
-                            }
-                        })
-                .setNegativeButton(negativeButtonText,
-                        new DialogInterface.OnClickListener() {
-                            public void onClick(DialogInterface dialog, int id) {
-                                // cancel the dialog box
-                                dialog.cancel();
-                            }
-                        });
+                                    dialog.cancel();
+                                }
+                            })
+                    .setNegativeButton(negativeButtonText,
+                            new DialogInterface.OnClickListener() {
+                                public void onClick(DialogInterface dialog, int id) {
+                                    // cancel the dialog box
+                                    dialog.cancel();
+                                }
+                            });
+        }
+        else {
+            builder.setMessage(content)
+                    .setCancelable(false)
+                    .setTitle(title)
+                    .setPositiveButton(positiveButtonText,
+                            new DialogInterface.OnClickListener() {
+                                public void onClick(DialogInterface dialog, int id) {
+                                    Intent myIntent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+                                    startActivity(myIntent);
+
+                                    dialog.cancel();
+                                }
+                            });
+        }
 
         AlertDialog alert = builder.create();
         alert.show();
@@ -253,7 +269,6 @@ public class TodayWeatherActivity extends AppCompatActivity {
 
                 String imageUrl = "http:" + conditionWeather.getString("icon").toString();
 
-
                 Drawable drawable = new RetrieveWeatherImage().execute(imageUrl).get();
                 imgvwCondition.setImageDrawable(drawable);
 
@@ -282,32 +297,25 @@ public class TodayWeatherActivity extends AppCompatActivity {
                 if (addresses.size() > 0){
                     cityName = addresses.get(0).getLocality();
 
-                    String buttonText = tvwCurrentCityName.getText() + " (" + cityName + ")";
-                    tvwCurrentCityName.setText(buttonText);
-
-                    SharedPreferences preferences = getSharedPreferences("Settings", MODE_PRIVATE);
-
-                    if(!cityName.equals(preferences.getString("CurrentCity", ""))){
-                        String result = new ReadAPI().execute().get();
-
-//                        SharedPreferences.Editor editor = preferences.edit();
-//                        editor.putString("CurrentCity", cityName);
-//                        editor.apply();
+                    if(!isLoadedOnce) {
+                        String buttonText = tvwCurrentCityName.getText() + " (" + cityName + ")";
+                        tvwCurrentCityName.setText(buttonText);
                     }
-                    else{
-                        LoadTemperatureInformation(preferences.getString("WeatherContent", ""));
-                    }
+
+                    String result = new ReadAPI().execute().get();
                 }
-            } catch (IOException e) {
+                else{
+                    ShowMessage("Weather App", context.getString(R.string.text_location_not_found_message), "Ok", "");
+                }
+            } catch (InterruptedException ex) {
                 progressBarLoading.setVisibility(View.GONE);
-                //Toast.makeText(context, "GPS Reading Started but failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                e.printStackTrace();
-            } catch (InterruptedException e) {
+                ex.printStackTrace();
+            } catch (ExecutionException ex) {
                 progressBarLoading.setVisibility(View.GONE);
-                e.printStackTrace();
-            } catch (ExecutionException e) {
+                ex.printStackTrace();
+            } catch (IOException ex) {
                 progressBarLoading.setVisibility(View.GONE);
-                e.printStackTrace();
+                ex.printStackTrace();
             }
         }
 
